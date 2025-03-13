@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SaaS Facturation
 
-## Getting Started
+## Description
 
-First, run the development server:
+SaaS Facturation est une application web de gestion de facturation destinée aux entrepreneurs et aux PME. Elle permet la création, la gestion et l'envoi de factures de manière simplifiée, avec un suivi des paiements et des relances automatiques.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Fonctionnalités principales
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Gestion des clients** : Ajout, modification et suppression des clients.
+- **Création de factures** : Génération de factures professionnelles en quelques clics.
+- **Suivi des paiements** : Statut des paiements (payé, en attente, en retard).
+- **Relances automatiques** : Notifications pour les factures en attente.
+- **Export PDF** : Téléchargement et envoi des factures au format PDF.
+- **Tableau de bord** : Aperçu rapide des revenus, factures impayées et statistiques.
+- **Multi-utilisateurs** : Gestion des accès selon les rôles (administrateur, comptable, employé).
+- **Sauvegarde Cloud** : Stockage sécurisé des documents et accès depuis n'importe où.
+- **Paiement en ligne (Stripe)** : Intégration de Stripe pour permettre aux clients de payer leurs factures directement depuis l'application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Technologies utilisées
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Front-end** : React (Next.js) avec TypeScript
+- **Back-end** : Firebase (Auth, Firestore, Storage, Functions)
+- **Paiement** : Stripe API
+- **UI/UX** : TailwindCSS + ShadCN
+- **Déploiement** : Vercel
 
-## Learn More
+## Installation
 
-To learn more about Next.js, take a look at the following resources:
+### 1. Cloner le projet
+```sh
+- **git clone https://github.com/ton-repo/saas-facturation.git**
+- **cd saas-facturation**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. Installer les dépendances
+- **sh**
+- **Copier**
+- **Modifier**
+- **npm install**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 3. Configurer Firebase
+- **Créer un projet Firebase**
+- **Activer l'authentification-(Email/Google)**
+- **Configurer Firestore et Storage**
+- **Récupérer les clés d'API et les ajouter dans un fichier .env.local**
 
-## Deploy on Vercel
+### 4. Configurer Stripe
+- **Créer un compte Stripe et obtenir les clés API**
+- **Ajouter les clés API Stripe (STRIPE_PUBLIC_KEY, STRIPE_SECRET_KEY) dans le fichier .env.local**
+- **Configurer un webhook pour gérer les paiements**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 5. Lancer l'application
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **sh**
+- **Copier**
+- **Modifier**
+- **npm run dev**
+- **Déploiement**
+- **L'application est déployée sur Vercel. Pour déployer**
+
+- **sh**
+- **Copier**
+- **Modifier**
+- **vercel**
+- **Assurez-vous d'avoir configuré les variables d'environnement dans Vercel.**
+
+- **Contribution**
+- **Les contributions sont les bienvenues !**
+
+- **Forker le projet**
+- **Créer une branche feature/ma-fonctionnalite**
+- **Faire une PR**
+- **Licence**
+- **Ce projet est sous licence MIT.**
+
+## Auteur : Christian Grohens (@JavaChrist)
