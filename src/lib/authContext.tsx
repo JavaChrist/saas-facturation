@@ -8,7 +8,7 @@ import {
   GoogleAuthProvider,
   signOut,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
 } from "firebase/auth";
 
 interface AuthContextType {
@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
     });
+
     return () => unsubscribe();
   }, []);
 
@@ -49,7 +50,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loginWithGoogle, loginWithEmail, registerWithEmail, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loginWithGoogle,
+        loginWithEmail,
+        registerWithEmail,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
