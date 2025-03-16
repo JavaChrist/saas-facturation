@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/authContext";
 import { useRouter } from "next/navigation";
 import { FiUsers, FiFileText, FiClock, FiSettings } from "react-icons/fi";
 import Link from "next/link";
+import Image from "next/image";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Facture } from "@/types/facture";
@@ -64,33 +65,45 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-800 text-white min-h-screen p-5">
-        <h2 className="text-xl font-bold mb-6">Facturation SaaS</h2>
+      <aside className="w-50 bg-gray-800 text-white min-h-screen p-5">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="relative w-12 h-12 flex-shrink-0">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              fill
+              sizes="(max-width: 48px) 100vw, 48px"
+              className="object-contain rounded-full"
+              priority
+            />
+          </div>
+          <h2 className="text-xl font-bold">Facturation SaaS</h2>
+        </div>
         <nav className="space-y-2">
-          <a
+          <Link
             href="/dashboard"
             className="block py-2 px-4 rounded-md bg-gray-700 hover:bg-gray-600"
           >
             Dashboard
-          </a>
-          <a
+          </Link>
+          <Link
             href="/dashboard/factures"
             className="block py-2 px-4 rounded-md hover:bg-gray-600"
           >
             Factures
-          </a>
-          <a
+          </Link>
+          <Link
             href="/dashboard/clients"
             className="block py-2 px-4 rounded-md hover:bg-gray-600"
           >
             Clients
-          </a>
-          <a
+          </Link>
+          <Link
             href="/dashboard/parametres"
             className="block py-2 px-4 rounded-md hover:bg-gray-600"
           >
             Paramètres
-          </a>
+          </Link>
         </nav>
         <button
           onClick={logout}

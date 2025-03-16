@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { db, auth } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Entreprise } from "@/types/entreprise";
-import { FiArrowLeft, FiSave } from "react-icons/fi";
+import { FiArrowLeft, FiSave, FiUpload } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
+import Image from "next/image";
 
 export default function ParametresPage() {
   const router = useRouter();
@@ -150,6 +152,60 @@ export default function ParametresPage() {
               Informations de l'entreprise
             </h2>
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Logo de l'entreprise
+                </label>
+                <div className="flex items-center gap-4">
+                  {entreprise.logo && (
+                    <div className="relative w-20 h-20">
+                      <Image
+                        src={entreprise.logo}
+                        alt="Logo de l'entreprise"
+                        fill
+                        sizes="(max-width: 80px) 100vw, 80px"
+                        className="object-contain rounded-lg"
+                      />
+                    </div>
+                  )}
+                  <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 transition-colors duration-200 p-4 rounded-lg flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            setIsSaving(true);
+                            const storageRef = ref(
+                              storage,
+                              `logos/${user?.uid}/${file.name}`
+                            );
+                            await uploadBytes(storageRef, file);
+                            const logoUrl = await getDownloadURL(storageRef);
+                            setEntreprise((prev) => ({
+                              ...prev,
+                              logo: logoUrl,
+                            }));
+                            setSaveMessage("✅ Logo uploadé avec succès");
+                          } catch (error) {
+                            console.error("Erreur lors de l'upload:", error);
+                            setError("Erreur lors de l'upload du logo");
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }
+                      }}
+                    />
+                    <FiUpload className="text-gray-600" />
+                    <span className="text-gray-600">
+                      {isSaving ? "Upload en cours..." : "Choisir un logo"}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Nom de l'entreprise

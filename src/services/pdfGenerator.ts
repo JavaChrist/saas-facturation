@@ -1,10 +1,17 @@
 import { jsPDF } from "jspdf";
-import type { UserOptions } from "jspdf-autotable";
-import "jspdf-autotable";
+import autoTable, { UserOptions } from "jspdf-autotable";
 import { Facture } from "@/types/facture";
 import { Entreprise } from "@/types/entreprise";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { ref, getDownloadURL } from "firebase/storage";
+
+// Déclaration du type augmenté
+declare module "jspdf" {
+  interface jsPDF {
+    autoTable: (options: UserOptions) => void;
+  }
+}
 
 export const generateInvoicePDF = async (facture: Facture) => {
   try {
@@ -39,20 +46,90 @@ export const generateInvoicePDF = async (facture: Facture) => {
 
     // En-tête
     console.log("Ajout de l'en-tête");
-    pdfDoc.setFontSize(20);
-    pdfDoc.text("FACTURE", 105, 20, { align: "center" });
+
+    // Ajout du logo s'il existe
+    if (entreprise.logo) {
+      try {
+        // Précharger l'image
+        const loadImage = (url: string): Promise<HTMLImageElement> => {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous"; // Important pour CORS
+            img.onload = () => resolve(img);
+            img.onerror = () =>
+              reject(new Error("Erreur de chargement de l'image"));
+            img.src = url;
+          });
+        };
+
+        // Convertir l'image en base64
+        const getBase64FromImage = (img: HTMLImageElement): string => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0);
+          // Forcer le format PNG
+          return canvas.toDataURL("image/png");
+        };
+
+        console.log("Chargement du logo depuis:", entreprise.logo);
+        const img = await loadImage(entreprise.logo);
+        console.log("Image chargée, dimensions:", img.width, "x", img.height);
+
+        const base64data = getBase64FromImage(img);
+        console.log("Image convertie en base64");
+
+        // Calculer les dimensions pour conserver le ratio
+        const maxWidth = 40;
+        const maxHeight = 40;
+        const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+        const width = img.width * ratio;
+        const height = img.height * ratio;
+
+        console.log(
+          "Ajout du logo au PDF avec dimensions:",
+          width,
+          "x",
+          height
+        );
+        pdfDoc.addImage(base64data, "PNG", 20, 15, width, height);
+
+        // Décaler le titre "FACTURE" vers la droite si le logo est présent
+        pdfDoc.setFontSize(20);
+        pdfDoc.text("FACTURE", 140, 20, { align: "center" });
+      } catch (error) {
+        console.error("Erreur détaillée lors de l'ajout du logo:", error);
+        // En cas d'erreur avec le logo, on affiche juste le titre au centre
+        pdfDoc.setFontSize(20);
+        pdfDoc.text("FACTURE", 105, 20, { align: "center" });
+      }
+    } else {
+      // Sans logo, on centre le titre
+      pdfDoc.setFontSize(20);
+      pdfDoc.text("FACTURE", 105, 20, { align: "center" });
+    }
 
     // Informations de l'entreprise
     console.log("Ajout des informations de l'entreprise");
     pdfDoc.setFontSize(10);
-    pdfDoc.text(entreprise.nom.toUpperCase(), 20, 40);
-    pdfDoc.text(entreprise.rue, 20, 45);
-    pdfDoc.text(`${entreprise.codePostal} ${entreprise.ville}`, 20, 50);
-    pdfDoc.text(`Tél: ${entreprise.telephone}`, 20, 55);
-    pdfDoc.text(`Email: ${entreprise.email}`, 20, 60);
-    pdfDoc.text(`SIRET: ${entreprise.siret}`, 20, 65);
+    const startY = entreprise.logo ? 45 : 40; // Ajuster la position Y en fonction de la présence du logo
+    pdfDoc.text(entreprise.nom.toUpperCase(), 20, startY);
+    pdfDoc.text(entreprise.rue, 20, startY + 5);
+    pdfDoc.text(
+      `${entreprise.codePostal} ${entreprise.ville}`,
+      20,
+      startY + 10
+    );
+    pdfDoc.text(`Tél: ${entreprise.telephone}`, 20, startY + 15);
+    pdfDoc.text(`Email: ${entreprise.email}`, 20, startY + 20);
+    pdfDoc.text(`SIRET: ${entreprise.siret}`, 20, startY + 25);
     if (entreprise.tvaIntracommunautaire) {
-      pdfDoc.text(`TVA Intra: ${entreprise.tvaIntracommunautaire}`, 20, 70);
+      pdfDoc.text(
+        `TVA Intra: ${entreprise.tvaIntracommunautaire}`,
+        20,
+        startY + 30
+      );
     }
 
     // Informations de la facture
@@ -122,7 +199,7 @@ export const generateInvoicePDF = async (facture: Facture) => {
     });
 
     console.log("Configuration du tableau");
-    (pdfDoc as any).autoTable({
+    autoTable(pdfDoc, {
       startY: 100,
       head: [tableColumn],
       body: tableRows,
@@ -155,22 +232,29 @@ export const generateInvoicePDF = async (facture: Facture) => {
       finalY + 20
     );
 
-    // Coordonnées bancaires si présentes
-    if (entreprise.rib?.iban) {
-      pdfDoc.setFontSize(9);
-      pdfDoc.text("Coordonnées bancaires:", 20, finalY + 40);
-      pdfDoc.text(`IBAN: ${entreprise.rib.iban}`, 20, finalY + 45);
-      pdfDoc.text(`BIC: ${entreprise.rib.bic}`, 20, finalY + 50);
-      pdfDoc.text(`Banque: ${entreprise.rib.banque}`, 20, finalY + 55);
-    }
+    // Fonction pour ajouter le pied de page
+    const addFooter = () => {
+      const pageHeight = pdfDoc.internal.pageSize.height;
 
-    // Mentions légales
-    console.log("Ajout des mentions légales");
-    pdfDoc.setFontSize(8);
-    const mentionsY = entreprise.rib?.iban ? finalY + 70 : finalY + 40;
-    entreprise.mentionsLegales?.forEach((mention, index) => {
-      pdfDoc.text(mention, 20, mentionsY + index * 5);
-    });
+      // Coordonnées bancaires si présentes
+      if (entreprise.rib?.iban) {
+        pdfDoc.setFontSize(9);
+        pdfDoc.text("Coordonnées bancaires:", 20, pageHeight - 50);
+        pdfDoc.text(`IBAN: ${entreprise.rib.iban}`, 20, pageHeight - 45);
+        pdfDoc.text(`BIC: ${entreprise.rib.bic}`, 20, pageHeight - 40);
+        pdfDoc.text(`Banque: ${entreprise.rib.banque}`, 20, pageHeight - 35);
+      }
+
+      // Mentions légales
+      console.log("Ajout des mentions légales");
+      pdfDoc.setFontSize(8);
+      entreprise.mentionsLegales?.forEach((mention, index) => {
+        pdfDoc.text(mention, 20, pageHeight - 20 + index * 5);
+      });
+    };
+
+    // Ajouter le pied de page
+    addFooter();
 
     // Sauvegarde du PDF avec gestion d'erreur
     console.log("Tentative de sauvegarde du PDF");
