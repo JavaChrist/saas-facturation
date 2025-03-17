@@ -158,7 +158,7 @@ export default function ParametresPage() {
                 </label>
                 <div className="flex items-center gap-4">
                   {entreprise.logo && (
-                    <div className="relative w-20 h-20">
+                    <div className="relative w-20 h-20 group">
                       <Image
                         src={entreprise.logo}
                         alt="Logo de l'entreprise"
@@ -166,6 +166,19 @@ export default function ParametresPage() {
                         sizes="(max-width: 80px) 100vw, 80px"
                         className="object-contain rounded-lg"
                       />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEntreprise((prev) => ({
+                            ...prev,
+                            logo: "",
+                          }));
+                          setSaveMessage("Logo supprimé");
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                      >
+                        ×
+                      </button>
                     </div>
                   )}
                   <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 transition-colors duration-200 p-4 rounded-lg flex items-center gap-2">
@@ -178,16 +191,107 @@ export default function ParametresPage() {
                         if (file) {
                           try {
                             setIsSaving(true);
-                            const storageRef = ref(
-                              storage,
-                              `logos/${user?.uid}/${file.name}`
-                            );
-                            await uploadBytes(storageRef, file);
-                            const logoUrl = await getDownloadURL(storageRef);
+
+                            // Créer une image et attendre son chargement
+                            const loadImage = (
+                              file: File
+                            ): Promise<HTMLImageElement> => {
+                              return new Promise((resolve, reject) => {
+                                const img = document.createElement("img");
+                                img.onload = () => resolve(img);
+                                img.onerror = reject;
+                                img.src = URL.createObjectURL(file);
+                              });
+                            };
+
+                            // Redimensionner et sauvegarder en JPEG
+                            const resizeAndSaveImage = async (
+                              img: HTMLImageElement
+                            ): Promise<string> => {
+                              const canvas = document.createElement("canvas");
+                              const MAX_SIZE = 200;
+                              let width = img.width;
+                              let height = img.height;
+
+                              // Calculer les nouvelles dimensions en gardant le ratio
+                              if (width > height) {
+                                if (width > MAX_SIZE) {
+                                  height = Math.round(
+                                    (height * MAX_SIZE) / width
+                                  );
+                                  width = MAX_SIZE;
+                                }
+                              } else {
+                                if (height > MAX_SIZE) {
+                                  width = Math.round(
+                                    (width * MAX_SIZE) / height
+                                  );
+                                  height = MAX_SIZE;
+                                }
+                              }
+
+                              canvas.width = width;
+                              canvas.height = height;
+
+                              const ctx = canvas.getContext("2d");
+                              if (!ctx) {
+                                throw new Error(
+                                  "Impossible de créer le contexte 2D"
+                                );
+                              }
+
+                              // Remplir le canvas avec un fond blanc
+                              ctx.fillStyle = "#FFFFFF";
+                              ctx.fillRect(0, 0, width, height);
+
+                              // Dessiner l'image
+                              ctx.drawImage(img, 0, 0, width, height);
+
+                              // Générer un nom de fichier unique
+                              const fileName = `logo-${Date.now()}.jpg`;
+                              const logoPath = `/logos/${fileName}`;
+
+                              // Convertir le canvas en blob
+                              const blob = await new Promise<Blob>(
+                                (resolve) => {
+                                  canvas.toBlob(
+                                    (blob) => {
+                                      resolve(blob as Blob);
+                                    },
+                                    "image/jpeg",
+                                    0.95
+                                  );
+                                }
+                              );
+
+                              // Sauvegarder le fichier dans le dossier public/logos
+                              const formData = new FormData();
+                              formData.append("file", blob, fileName);
+
+                              const response = await fetch("/api/upload", {
+                                method: "POST",
+                                body: formData,
+                              });
+
+                              if (!response.ok) {
+                                throw new Error(
+                                  "Erreur lors de l'upload du fichier"
+                                );
+                              }
+
+                              const data = await response.json();
+                              return data.path;
+                            };
+
+                            const img = await loadImage(file);
+                            const logoPath = await resizeAndSaveImage(img);
+
+                            // Mettre à jour l'entreprise avec le chemin du logo
                             setEntreprise((prev) => ({
                               ...prev,
-                              logo: logoUrl,
+                              logo: logoPath,
                             }));
+
                             setSaveMessage("✅ Logo uploadé avec succès");
                           } catch (error) {
                             console.error("Erreur lors de l'upload:", error);

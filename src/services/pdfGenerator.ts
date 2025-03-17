@@ -4,7 +4,7 @@ import { Facture } from "@/types/facture";
 import { Entreprise } from "@/types/entreprise";
 import { db, storage } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { ref, getDownloadURL } from "firebase/storage";
+import { ref, getDownloadURL, getBlob } from "firebase/storage";
 
 // Déclaration du type augmenté
 declare module "jspdf" {
@@ -50,54 +50,22 @@ export const generateInvoicePDF = async (facture: Facture) => {
     // Ajout du logo s'il existe
     if (entreprise.logo) {
       try {
-        // Précharger l'image
-        const loadImage = (url: string): Promise<HTMLImageElement> => {
-          return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = "anonymous"; // Important pour CORS
-            img.onload = () => resolve(img);
-            img.onerror = () =>
-              reject(new Error("Erreur de chargement de l'image"));
-            img.src = url;
-          });
-        };
+        console.log("Ajout du logo au PDF");
+        const imgWidth = 40;
+        const imgHeight = 40;
 
-        // Convertir l'image en base64
-        const getBase64FromImage = (img: HTMLImageElement): string => {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          const ctx = canvas.getContext("2d");
-          ctx?.drawImage(img, 0, 0);
-          // Forcer le format PNG
-          return canvas.toDataURL("image/png");
-        };
-
-        console.log("Chargement du logo depuis:", entreprise.logo);
-        const img = await loadImage(entreprise.logo);
-        console.log("Image chargée, dimensions:", img.width, "x", img.height);
-
-        const base64data = getBase64FromImage(img);
-        console.log("Image convertie en base64");
-
-        // Calculer les dimensions pour conserver le ratio
-        const maxWidth = 40;
-        const maxHeight = 40;
-        const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
-        const width = img.width * ratio;
-        const height = img.height * ratio;
-
-        console.log(
-          "Ajout du logo au PDF avec dimensions:",
-          width,
-          "x",
-          height
-        );
-        pdfDoc.addImage(base64data, "PNG", 20, 15, width, height);
-
-        // Décaler le titre "FACTURE" vers la droite si le logo est présent
-        pdfDoc.setFontSize(20);
-        pdfDoc.text("FACTURE", 140, 20, { align: "center" });
+        // Ignorer les URLs Firebase Storage
+        if (!entreprise.logo.includes("firebasestorage.googleapis.com")) {
+          pdfDoc.addImage(entreprise.logo, "JPEG", 20, 15, imgWidth, imgHeight);
+          // Décaler le titre "FACTURE" vers la droite si le logo est présent
+          pdfDoc.setFontSize(20);
+          pdfDoc.text("FACTURE", 140, 20, { align: "center" });
+        } else {
+          // Si c'est une URL Firebase Storage, on n'affiche pas le logo
+          console.log("URL Firebase Storage détectée, logo ignoré");
+          pdfDoc.setFontSize(20);
+          pdfDoc.text("FACTURE", 105, 20, { align: "center" });
+        }
       } catch (error) {
         console.error("Erreur détaillée lors de l'ajout du logo:", error);
         // En cas d'erreur avec le logo, on affiche juste le titre au centre
